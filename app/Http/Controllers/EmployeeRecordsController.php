@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
 use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\Designation;
@@ -33,7 +34,7 @@ class EmployeeRecordsController extends Controller
                 $q = $request->string('q');
                 $query->where(function ($w) use ($q) {
                     $w->where('employee_code', 'like', "%{$q}%")
-                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%"));
+                      ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%"));
                 });
             }
 
@@ -132,6 +133,8 @@ class EmployeeRecordsController extends Controller
             'departments' => Department::orderBy('name')->get(),
             'designations' => Designation::orderBy('title')->get(),
             'possibleManagers' => $possibleManagers,
+            'todayAttendance' => Attendance::where('employee_id', $employee->id)
+                ->whereDate('attendance_date', now()->toDateString())->first(),
         ]));
     }
 
@@ -165,7 +168,7 @@ class EmployeeRecordsController extends Controller
             ]);
 
             $lastNumber = (int) Employee::query()
-                ->selectRaw('MAX(CAST(SUBSTR(employee_code, 4) AS INTEGER)) as n')
+                ->selectRaw("MAX(CAST(SUBSTR(employee_code, 4) AS INTEGER)) as n")
                 ->value('n');
 
             $employee = Employee::create([
@@ -379,7 +382,7 @@ class EmployeeRecordsController extends Controller
         ]);
 
         if (! $isHr) {
-            foreach (User::whereIn('role', ['hr_admin', 'super_admin'])->pluck('id') as $userId) {
+            foreach (\App\Models\User::whereIn('role', ['hr_admin', 'super_admin'])->pluck('id') as $userId) {
                 Notification::notify($userId, 'document_uploaded', $employee->user->name.' uploaded a '.$data['document_type'].' for verification.', '/modules/employee-records?employee='.$employee->id);
             }
         }

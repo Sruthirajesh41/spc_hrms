@@ -3,7 +3,17 @@
 @section('title', $module['title'])
 
 @section('content')
-    @include('partials.topbar', ['title' => $module['title'], 'eyebrow' => 'HR Management Module'])
+    @include('partials.topbar', [
+        'title' => $module['title'],
+        'eyebrow' => 'Records',
+        'heroIcon' => 'fa-regular fa-building',
+        'heroSummary' => 'Departments, designations and the company holiday calendar.',
+        'heroStats' => [
+            ['label' => 'Departments', 'icon' => 'fa-solid fa-sitemap', 'value' => $departments->count()],
+            ['label' => 'Designations', 'icon' => 'fa-solid fa-briefcase', 'value' => $designations->count()],
+            ['label' => 'Holidays', 'icon' => 'fa-regular fa-calendar', 'value' => $holidays->count()],
+        ],
+    ])
 
     <div class="content">
         <div class="tabs">
@@ -14,8 +24,9 @@
 
         <div class="tabpanel active" data-tabpanel="departments">
             <div class="grid-2">
-                <div class="card">
-                    <h3>Departments</h3>
+                <div class="table-card">
+                    <div class="tc-head"><h3><span class="wh-ico"><i class="fa-solid fa-sitemap"></i></span>Departments</h3></div>
+                    <div class="tc-body">
                     <table>
                         <thead><tr><th>Name</th><th>Code</th><th>Employees</th></tr></thead>
                         <tbody>
@@ -35,9 +46,10 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
                 <div class="card">
-                    <h3>Add department</h3>
+                    <div class="widget-head"><div class="wh-ico"><i class="fa-solid fa-plus"></i></div><div><h3>Add department</h3><p>Create a new department for the org.</p></div></div>
                     <form method="POST" action="{{ route('organization.department.store') }}">
                         @csrf
                         <div class="field-grid">
@@ -52,8 +64,9 @@
 
         <div class="tabpanel" data-tabpanel="designations">
             <div class="grid-2">
-                <div class="card">
-                    <h3>Designations</h3>
+                <div class="table-card">
+                    <div class="tc-head"><h3><span class="wh-ico"><i class="fa-solid fa-briefcase"></i></span>Designations</h3></div>
+                    <div class="tc-body">
                     <table>
                         <thead><tr><th>Title</th><th>Department</th><th>Employees</th></tr></thead>
                         <tbody>
@@ -78,9 +91,10 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
                 <div class="card">
-                    <h3>Add designation</h3>
+                    <div class="widget-head"><div class="wh-ico"><i class="fa-solid fa-plus"></i></div><div><h3>Add designation</h3><p>Create a new job title.</p></div></div>
                     <form method="POST" action="{{ route('organization.designation.store') }}">
                         @csrf
                         <div class="field-grid">
@@ -101,8 +115,9 @@
 
         <div class="tabpanel" data-tabpanel="holidays">
             <div class="grid-2">
-                <div class="card">
-                    <h3>Holiday calendar</h3>
+                <div class="table-card">
+                    <div class="tc-head"><h3><span class="wh-ico"><i class="fa-regular fa-calendar"></i></span>Holiday calendar</h3></div>
+                    <div class="tc-body">
                     <table>
                         <thead><tr><th>Holiday</th><th>Date</th><th>Type</th><th></th></tr></thead>
                         <tbody>
@@ -121,9 +136,10 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
                 <div class="card">
-                    <h3>Add holiday</h3>
+                    <div class="widget-head"><div class="wh-ico"><i class="fa-regular fa-calendar-plus"></i></div><div><h3>Add holiday</h3><p>Feeds dashboards and WFH/leave context.</p></div></div>
                     <form method="POST" action="{{ route('organization.holiday.store') }}">
                         @csrf
                         <div class="field-grid">

@@ -5,15 +5,31 @@
 @section('content')
 @php $attendanceDepartments = $dailyAttendance ->pluck('employee.department.name') ->filter() ->unique() ->sort()
 ->values(); @endphp
-@include('partials.topbar', ['title' => $module['title'], 'eyebrow' => 'HR Management Module'])
+@include('partials.topbar', [
+    'title' => $module['title'],
+    'eyebrow' => 'Workforce',
+    'heroIcon' => 'fa-regular fa-clock',
+    'heroSummary' => 'Check-in / check-out, date-wise reports, corrections and monthly summaries.',
+    'heroStats' => [
+        ['label' => 'Present today', 'icon' => 'fa-solid fa-user-check', 'value' => ($dailyCounts['present'] ?? 0) . '/' . ($dailyCounts['total'] ?? 0)],
+        ['label' => 'WFH today', 'icon' => 'fa-solid fa-house-laptop', 'value' => $dailyCounts['wfh'] ?? 0],
+        ['label' => 'Absent', 'icon' => 'fa-solid fa-user-xmark', 'value' => $dailyCounts['absent'] ?? 0],
+        ['label' => 'Corrections', 'icon' => 'fa-solid fa-pen-to-square', 'value' => $pendingApprovals->count()],
+    ],
+])
 
 
 <div class="content">
     @if($showOwnAttendance)
     <div class="grid-2">
         <div class="card">
-            <h3>Your attendance</h3>
-            <p class="card-note">Check in and check out from this screen. Your latest records are shown below.</p>
+            <div class="widget-head">
+                <div class="wh-ico"><i class="fa-regular fa-clock"></i></div>
+                <div>
+                    <h3>Your attendance</h3>
+                    <p>Check in and check out from this screen. Your latest records are shown below.</p>
+                </div>
+            </div>
 
             <div class="form-actions" style="margin:18px 0 20px;">
                 @if(!$todayOwnAttendance || !$todayOwnAttendance->check_in)
@@ -76,8 +92,13 @@
 
         <div class="stack">
             <div class="card">
-                <h3>Request regularization</h3>
-                <p class="card-note">Missed punch or biometric issue? Submit it for approval.</p>
+                <div class="widget-head">
+                    <div class="wh-ico"><i class="fa-solid fa-pen-to-square"></i></div>
+                    <div>
+                        <h3>Request regularization</h3>
+                        <p>Missed punch or biometric issue? Submit it for approval.</p>
+                    </div>
+                </div>
                 <form method="POST" action="{{ route('attendance.regularize') }}">
                     @csrf
                     <div class="field-grid">
@@ -94,10 +115,18 @@
                 </form>
             </div>
 
-            <div class="card">
-                <h3>Your regularization requests</h3>
+            <div class="table-card">
+                <div class="tc-head">
+                    <h3><span class="wh-ico"><i class="fa-solid fa-clock-rotate-left"></i></span>Your regularization requests</h3>
+                    <span class="pill pill-muted">{{ $ownRegularizations->count() }} total</span>
+                </div>
+                <div class="tc-body">
                 @if($ownRegularizations->isEmpty())
-                <p class="field-hint">None submitted yet.</p>
+                <div class="empty-widget">
+                    <div class="ew-ico"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <b>None submitted yet</b>
+                    <span>Missed-punch corrections you submit will appear here.</span>
+                </div>
                 @else
                 <table>
                     <thead>
@@ -124,6 +153,7 @@
                     </tbody>
                 </table>
                 @endif
+                </div>
             </div>
         </div>
     </div>
@@ -143,8 +173,13 @@
 
     {{-- Daily (Today) --}}
     <div class="tabpanel {{ $activeTab === 'daily' ? 'active' : '' }}" data-tabpanel="daily">
-        <h3>Daily attendance — {{ now()->format('d M Y') }}</h3>
-        <p class="card-note">Mark attendance for any active employee. Approved WFH is shown as WFH.</p>
+        <div class="widget-head">
+            <div class="wh-ico"><i class="fa-regular fa-clock"></i></div>
+            <div>
+                <h3>Daily attendance — {{ now()->format('d M Y') }}</h3>
+                <p>Mark attendance for any active employee. Approved WFH is shown as WFH.</p>
+            </div>
+        </div>
 
         <div class="filters" style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:18px 0;">
 
@@ -182,16 +217,17 @@
             </div>
         </div>
 
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
-            <span class="pill pill-ok">Present: {{ $dailyCounts['present'] }}</span>
-            <span class="pill pill-warn">Late: {{ $dailyCounts['late'] }}</span>
-            <span class="pill pill-muted">Leave: {{ $dailyCounts['leave'] }}</span>
-            <span class="pill pill-ok">WFH: {{ $dailyCounts['wfh'] }}</span>
-            <span class="pill pill-bad">Absent: {{ $dailyCounts['absent'] }}</span>
-            <span class="pill pill-muted">Total: {{ $dailyCounts['total'] }}</span>
+        <div class="stat-tiles" style="margin:16px 0;">
+            <div class="stat-tile"><div class="st-ico"><i class="fa-solid fa-user-check"></i></div><div><b>{{ $dailyCounts['present'] }}</b><span>Present</span></div></div>
+            <div class="stat-tile alt"><div class="st-ico"><i class="fa-regular fa-clock"></i></div><div><b>{{ $dailyCounts['late'] }}</b><span>Late</span></div></div>
+            <div class="stat-tile info"><div class="st-ico"><i class="fa-solid fa-plane-departure"></i></div><div><b>{{ $dailyCounts['leave'] }}</b><span>On leave</span></div></div>
+            <div class="stat-tile"><div class="st-ico"><i class="fa-solid fa-house-laptop"></i></div><div><b>{{ $dailyCounts['wfh'] }}</b><span>WFH</span></div></div>
+            <div class="stat-tile warn"><div class="st-ico"><i class="fa-solid fa-user-xmark"></i></div><div><b>{{ $dailyCounts['absent'] }}</b><span>Absent</span></div></div>
+            <div class="stat-tile"><div class="st-ico"><i class="fa-solid fa-layer-group"></i></div><div><b>{{ $dailyCounts['total'] }}</b><span>Total</span></div></div>
         </div>
 
-        <div class="card">
+        <div class="table-card">
+            <div class="tc-body">
             <table>
                 <thead>
                     <tr>
@@ -255,11 +291,18 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="empty-state">No active employees found.</td>
+                        <td colspan="6">
+                            <div class="empty-widget">
+                                <div class="ew-ico"><i class="fa-regular fa-clock"></i></div>
+                                <b>No active employees found</b>
+                                <span>Daily attendance appears once employees exist.</span>
+                            </div>
+                        </td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 
@@ -267,9 +310,12 @@
     <div class="tabpanel {{ $activeTab === 'report' ? 'active' : '' }}" data-tabpanel="report">
         <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
-                <div>
-                    <h3>Date-wise Attendance Report</h3>
-                    <p class="card-note">View attendance, leave and absence for a selected date.</p>
+                <div class="widget-head" style="margin:0;">
+                    <div class="wh-ico"><i class="fa-regular fa-calendar-check"></i></div>
+                    <div>
+                        <h3>Date-wise Attendance Report</h3>
+                        <p>View attendance, leave and absence for a selected date.</p>
+                    </div>
                 </div>
                 <form method="GET" action="{{ route('attendance.index') }}"
                     style="display:flex;gap:10px;align-items:end;">
@@ -284,17 +330,29 @@
                 </form>
             </div>
 
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 22px;">
-                <span class="pill pill-ok">Present: {{ $reportCounts['present'] }}</span>
-                <span class="pill pill-warn">Late: {{ $reportCounts['late'] }}</span>
-                <span class="pill pill-muted">Leave: {{ $reportCounts['leave'] }}</span>
-                <span class="pill pill-ok">WFH: {{ $reportCounts['wfh'] }}</span>
-                <span class="pill pill-bad">Absent: {{ $reportCounts['absent'] }}</span>
-                <span class="pill pill-muted">Total: {{ $reportCounts['total'] }}</span>
+            <div class="stat-tiles" style="margin:18px 0 22px;">
+                <div class="stat-tile"><div class="st-ico"><i class="fa-solid fa-user-check"></i></div><div><b>{{ $reportCounts['present'] }}</b><span>Present</span></div></div>
+                <div class="stat-tile alt"><div class="st-ico"><i class="fa-regular fa-clock"></i></div><div><b>{{ $reportCounts['late'] }}</b><span>Late</span></div></div>
+                <div class="stat-tile info"><div class="st-ico"><i class="fa-solid fa-plane-departure"></i></div><div><b>{{ $reportCounts['leave'] }}</b><span>On leave</span></div></div>
+                <div class="stat-tile"><div class="st-ico"><i class="fa-solid fa-house-laptop"></i></div><div><b>{{ $reportCounts['wfh'] }}</b><span>WFH</span></div></div>
+                <div class="stat-tile warn"><div class="st-ico"><i class="fa-solid fa-user-xmark"></i></div><div><b>{{ $reportCounts['absent'] }}</b><span>Absent</span></div></div>
+                <div class="stat-tile"><div class="st-ico"><i class="fa-solid fa-layer-group"></i></div><div><b>{{ $reportCounts['total'] }}</b><span>Total</span></div></div>
             </div>
-
-            <h3 style="margin-bottom:2px;">{{ \Illuminate\Support\Carbon::parse($reportDate)->format('d M Y') }}</h3>
-            <p class="card-note" style="margin-top:0;">Employee attendance status for this date.</p>
+            @php $reportHasData = ($reportCounts['present'] + $reportCounts['late'] + $reportCounts['leave'] + $reportCounts['wfh']) > 0; @endphp
+            @if(!$reportHasData)
+            <div class="empty-widget" style="margin:22px 0 6px;">
+                <div class="ew-ico"><i class="fa-regular fa-face-smile"></i></div>
+                <b>No attendance recorded on {{ \Illuminate\Support\Carbon::parse($reportDate)->format('d M Y') }}</b>
+                <span>This looks like a non-working day or holiday — pick a different date above.</span>
+            </div>
+            @else
+            <div class="widget-head" style="margin:18px 0 12px;">
+                <div class="wh-ico"><i class="fa-regular fa-calendar"></i></div>
+                <div>
+                    <h3>{{ \Illuminate\Support\Carbon::parse($reportDate)->format('d M Y') }}</h3>
+                    <p>Employee attendance status for this date.</p>
+                </div>
+            </div>
 
             <table>
                 <thead>
@@ -334,18 +392,32 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="empty-state">No employees found.</td>
+                        <td colspan="6">
+                            <div class="empty-widget">
+                                <div class="ew-ico"><i class="fa-regular fa-calendar-check"></i></div>
+                                <b>No employees found</b>
+                                <span>Try a different date or check the filters.</span>
+                            </div>
+                        </td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
+            @endif
         </div>
     </div>
 
     {{-- Corrections --}}
     <div class="tabpanel {{ $activeTab === 'corrections' ? 'active' : '' }}" data-tabpanel="corrections">
-        <p class="section-note">Regularization requests waiting for your approval.</p>
-        <div class="card">
+        <div class="widget-head">
+            <div class="wh-ico"><i class="fa-solid fa-pen-to-square"></i></div>
+            <div>
+                <h3>Correction requests</h3>
+                <p>Regularization requests waiting for your approval.</p>
+            </div>
+        </div>
+        <div class="table-card">
+            <div class="tc-body">
             <table>
                 <thead>
                     <tr>
@@ -380,24 +452,34 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="empty-state">No pending corrections.</td>
+                        <td colspan="5">
+                            <div class="empty-widget">
+                                <div class="ew-ico"><i class="fa-solid fa-circle-check"></i></div>
+                                <b>No pending corrections</b>
+                                <span>All regularization requests have been reviewed.</span>
+                            </div>
+                        </td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 
     {{-- Monthly Summary --}}
     <div class="tabpanel {{ $activeTab === 'monthly' ? 'active' : '' }}" data-tabpanel="monthly">
-        @php $monthlyDepartments =
-        $monthlyRows->pluck('employee.department.name')->filter()->unique()->sort()->values(); @endphp
+        @php
+        $monthlyDepartments = $monthlyRows->pluck('employee.department.name')->filter()->unique()->sort()->values();
+        $monthlyHasData = $monthlyRows->contains(fn ($r) => ($r->present + $r->late + $r->leave + $r->absent) > 0);
+        @endphp
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
-            <div>
-                <h3 style="margin-bottom:2px;">Monthly Summary</h3>
-                <p class="section-note" style="margin-top:0;">
-                    {{ \Illuminate\Support\Carbon::createFromFormat('Y-m', $selectedMonth)->format('F Y') }} ·
-                    Attendance breakdown per employee, month to date.</p>
+            <div class="widget-head" style="margin:0;">
+                <div class="wh-ico"><i class="fa-regular fa-calendar-days"></i></div>
+                <div>
+                    <h3>Monthly Summary</h3>
+                    <p>{{ \Illuminate\Support\Carbon::createFromFormat('Y-m', $selectedMonth)->format('F Y') }} · Attendance breakdown per employee, month to date.</p>
+                </div>
             </div>
             <form method="GET" action="{{ route('attendance.index') }}" style="display:flex;gap:10px;align-items:end;">
                 <input type="hidden" name="tab" value="monthly">
@@ -408,6 +490,14 @@
                 <button type="submit" class="btn-primary">View Month</button>
             </form>
         </div>
+
+        @if(!$monthlyHasData)
+        <div class="empty-widget" style="margin:22px 0 0;">
+            <div class="ew-ico"><i class="fa-regular fa-calendar-xmark"></i></div>
+            <b>No attendance recorded for {{ \Illuminate\Support\Carbon::createFromFormat('Y-m', $selectedMonth)->format('F Y') }}</b>
+            <span>Check-ins will appear here as your team starts marking attendance. Try another month above.</span>
+        </div>
+        @else
 
         <div class="filters" style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:18px 0;">
             <div class="field" style="min-width:190px;">
@@ -429,7 +519,8 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="table-card">
+            <div class="tc-body">
             <table>
                 <thead>
                     <tr>
@@ -466,12 +557,20 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="empty-state">No active employees found.</td>
+                        <td colspan="7">
+                            <div class="empty-widget">
+                                <div class="ew-ico"><i class="fa-regular fa-calendar-days"></i></div>
+                                <b>No active employees found</b>
+                                <span>Monthly summaries appear once attendance exists.</span>
+                            </div>
+                        </td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
+        @endif
     </div>
 
     <script>

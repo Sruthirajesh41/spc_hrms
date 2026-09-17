@@ -3,17 +3,30 @@
 @section('title', $module['title'])
 
 @section('content')
-@include('partials.topbar', ['title' => $module['title'], 'eyebrow' => 'HR Management Module'])
+@include('partials.topbar', [
+    'title' => $module['title'],
+    'eyebrow' => 'Workforce',
+    'heroIcon' => 'fa-regular fa-calendar-days',
+    'heroSummary' => 'Apply for leave, track balances, and approve your team\'s requests.',
+    'heroStats' => $role !== 'super_admin' ? [
+        ['label' => 'My requests', 'icon' => 'fa-regular fa-paper-plane', 'value' => $ownRequests->count()],
+        ['label' => 'To approve', 'icon' => 'fa-solid fa-hourglass-half', 'value' => $pendingApprovals->count()],
+        ['label' => 'Days left', 'icon' => 'fa-solid fa-scale-balanced', 'value' => rtrim(rtrim(number_format($balances->sum('remaining'),1),'0'),'.').'d'],
+    ] : [
+        ['label' => 'To approve', 'icon' => 'fa-solid fa-hourglass-half', 'value' => $pendingApprovals->count()],
+    ],
+])
 
 <div class="content">
     @if($role !== 'super_admin' && $balances->isNotEmpty())
-    <div class="grid-4" style="margin-bottom:28px;">
+    @php $entitled = fn($b) => $b->opening_balance + $b->accrued + $b->carried_forward; @endphp
+    <div class="stat-tiles" style="grid-template-columns:repeat({{ min($balances->count(), 4) }},1fr);">
         @foreach($balances as $b)
-        <div class="card">
-            <h3>{{ $b->leaveType->name }}</h3>
-            <div class="serif" style="font-size:22px;">{{ number_format($b->remaining, 1) }}</div>
-            <div class="card-note" style="margin:2px 0 0;">of
-                {{ number_format($b->opening_balance + $b->accrued + $b->carried_forward, 1) }} days remaining</div>
+        @php $pct = $entitled($b) > 0 ? round($b->remaining / $entitled($b) * 100) : 0; @endphp
+        <div class="ring-card">
+            <div class="ring" style="--pct:{{ $pct }};"><b>{{ rtrim(rtrim(number_format($b->remaining,1),'0'),'.') }}</b></div>
+            <h4>{{ $b->leaveType->name }}</h4>
+            <small>{{ $pct }}% of {{ rtrim(rtrim(number_format($entitled($b),1),'0'),'.') }}d left</small>
         </div>
         @endforeach
     </div>
@@ -22,8 +35,13 @@
     @if($role !== 'super_admin')
     <div class="grid-2">
         <div class="card">
-            <h3>Apply for leave</h3>
-            <p class="card-note">Submitted requests are routed to your reporting manager.</p>
+            <div class="widget-head">
+                <div class="wh-ico"><i class="fa-solid fa-plane-departure"></i></div>
+                <div>
+                    <h3>Apply for leave</h3>
+                    <p>Submitted requests are routed to your reporting manager.</p>
+                </div>
+            </div>
             <form method="POST" action="{{ route('leave.apply') }}">
                 @csrf
                 <div class="field-grid">
@@ -44,32 +62,90 @@
             </form>
         </div>
 
-        <div class="card">
-            <h3>Your recent leave applications</h3>
-            @if($ownRequests->isEmpty())
-            <p class="field-hint">No leave applications yet.</p>
+        <div class="table-card">
+            <div class="tc-head">
+                <h3><span class="wh-ico"><i class="fa-regular fa-clock"></i></span>Your recent applications</h3>
+                <span class="pill pill-muted">{{ $ownRequests->count() }} total</span>
+            </div>
+            <div class="tc-body">
+                @if($ownRequests->isEmpty())
+                <div class="empty-widget">
+                    <div class="ew-ico"><i class="fa-regular fa-folder-open"></i></div>
+                    <b>No applications yet</b>
+                    <span>Your leave requests will appear here.</span>
+                </div>
+                @else
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Dates</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($ownRequests as $r)
+                        <tr>
+                            <td><b>{{ $r->leaveType->name }}</b> &middot; {{ rtrim(rtrim(number_format($r->days,1),'0'),'.') }}d</td>
+                            <td>{{ \Illuminate\Support\Carbon::parse($r->start_date)->format('M j, Y') }}&ndash;{{ \Illuminate\Support\Carbon::parse($r->end_date)->format('M j, Y') }}</td>
+                            <td>
+                                @php $p = ['approved'=>'pill-ok','pending'=>'pill-warn','rejected'=>'pill-bad','cancelled'=>'pill-muted'][$r->status] ?? 'pill-muted'; @endphp
+                                <span class="pill {{ $p }}">{{ $r->status === 'pending' ? 'Awaiting approval' : ucfirst($r->status) }}</span>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                @endif
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <div class="section-head" style="margin-top:30px;">
+        <h2><i class="fa-solid fa-clipboard-check"></i>Leave requests to approve</h2>
+        <span class="hint">{{ $role === 'manager' ? 'From your direct reports' : 'Across the organization' }}</span>
+    </div>
+    <div class="table-card">
+        <div class="tc-head">
+            <h3><span class="wh-ico"><i class="fa-solid fa-list-check"></i></span>Pending approvals</h3>
+            <span class="pill {{ $pendingApprovals->isNotEmpty() ? 'pill-warn' : 'pill-ok' }}">{{ $pendingApprovals->count() }} waiting</span>
+        </div>
+        <div class="tc-body">
+            @if($pendingApprovals->isEmpty())
+            <div class="empty-widget">
+                <div class="ew-ico"><i class="fa-solid fa-circle-check"></i></div>
+                <b>All caught up</b>
+                <span>No leave requests waiting for your approval.</span>
+            </div>
             @else
             <table>
                 <thead>
                     <tr>
+                        <th>Employee</th>
                         <th>Type</th>
                         <th>Dates</th>
-                        <th>Status</th>
+                        <th>Reason</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($ownRequests as $r)
+                    @foreach($pendingApprovals as $r)
                     <tr>
-                        <td>{{ $r->leaveType->name }} &middot; {{ rtrim(rtrim(number_format($r->days,1),'0'),'.') }}d
-                        </td>
-                        <td>{{ \Illuminate\Support\Carbon::parse($r->start_date)->format('M j, Y') }}&ndash;{{ \Illuminate\Support\Carbon::parse($r->end_date)->format('M j, Y') }}
-                        </td>
                         <td>
-                            @php $p =
-                            ['approved'=>'pill-ok','pending'=>'pill-warn','rejected'=>'pill-bad','cancelled'=>'pill-muted'][$r->status]
-                            ?? 'pill-muted'; @endphp
-                            <span
-                                class="pill {{ $p }}">{{ $r->status === 'pending' ? 'Awaiting approval' : ucfirst($r->status) }}</span>
+                            <div class="cell-emp">
+                                <div class="av">{{ strtoupper(substr($r->employee->user->name,0,1).substr(strstr($r->employee->user->name,' ') ?: '',1,1)) }}</div>
+                                <div><b>{{ $r->employee->user->name }}</b><span>{{ $r->employee->department->name ?? '—' }}</span></div>
+                            </div>
+                        </td>
+                        <td>{{ $r->leaveType->name }} &middot; {{ rtrim(rtrim(number_format($r->days,1),'0'),'.') }}d</td>
+                        <td>{{ \Illuminate\Support\Carbon::parse($r->start_date)->format('M j, Y') }}&ndash;{{ \Illuminate\Support\Carbon::parse($r->end_date)->format('M j, Y') }}</td>
+                        <td>{{ \Illuminate\Support\Str::limit($r->reason ?: '—', 30) }}</td>
+                        <td>
+                            <div class="row-actions">
+                                <form method="POST" action="{{ route('leave.decide', $r) }}">@csrf<input type="hidden" name="action" value="approve"><button class="approve" type="submit">Approve</button></form>
+                                <form method="POST" action="{{ route('leave.decide', $r) }}">@csrf<input type="hidden" name="action" value="reject"><button class="reject" type="submit">Reject</button></form>
+                            </div>
                         </td>
                     </tr>
                     @endforeach
@@ -78,151 +154,92 @@
             @endif
         </div>
     </div>
-    @endif
-
-    @if($pendingApprovals->isNotEmpty())
-    <h2 class="section-title" style="margin-top:32px;">Leave Requests to Approve</h2>
-    <p class="section-note">Pending leave requests
-        {{ $role === 'manager' ? 'from your direct reports' : 'across the organization' }}.</p>
-    <div class="card">
-        <table>
-            <thead>
-                <tr>
-                    <th>Employee</th>
-                    <th>Type</th>
-                    <th>Dates</th>
-                    <th>Reason</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($pendingApprovals as $r)
-                <tr>
-                    <td>{{ $r->employee->user->name }}</td>
-                    <td>{{ $r->leaveType->name }} &middot; {{ rtrim(rtrim(number_format($r->days,1),'0'),'.') }}d</td>
-                    <td>{{ \Illuminate\Support\Carbon::parse($r->start_date)->format('M j, Y') }}&ndash;{{ \Illuminate\Support\Carbon::parse($r->end_date)->format('M j, Y') }}
-                    </td>
-                    <td>{{ \Illuminate\Support\Str::limit($r->reason ?: '—', 30) }}</td>
-                    <td>
-                        <div class="row-actions">
-                            <form method="POST" action="{{ route('leave.decide', $r) }}">@csrf<input type="hidden"
-                                    name="action" value="approve"><button class="approve" type="submit">Approve</button>
-                            </form>
-                            <form method="POST" action="{{ route('leave.decide', $r) }}">@csrf<input type="hidden"
-                                    name="action" value="reject"><button class="reject" type="submit">Reject</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-    @endif
 
     @if($role === 'hr_admin' || $role === 'super_admin')
-    <h2 class="section-title" style="margin-top:32px;">All Leave Requests</h2>
-    <p class="section-note">Full leave register across the organization — pending, approved and rejected.</p>
+    <div class="section-head" style="margin-top:30px;">
+        <h2><i class="fa-solid fa-table-list"></i>Organization leave register</h2>
+        <span class="hint">All leave requests with department &amp; status filters</span>
+    </div>
+    <div class="stat-tiles">
+        <div class="stat-tile"><div class="st-ico"><i class="fa-solid fa-layer-group"></i></div><div><b>{{ $leaveCounts['total'] }}</b><span>Total requests</span></div></div>
+        <div class="stat-tile alt"><div class="st-ico"><i class="fa-solid fa-hourglass-half"></i></div><div><b>{{ $leaveCounts['pending'] }}</b><span>Pending</span></div></div>
+        <div class="stat-tile"><div class="st-ico"><i class="fa-solid fa-circle-check"></i></div><div><b>{{ $leaveCounts['approved'] }}</b><span>Approved</span></div></div>
+        <div class="stat-tile warn"><div class="st-ico"><i class="fa-solid fa-circle-xmark"></i></div><div><b>{{ $leaveCounts['rejected'] }}</b><span>Rejected</span></div></div>
+    </div>
 
-    <form method="GET" action="{{ route('leave.index') }}" class="filters"
-        style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:18px 0;">
+    <form method="GET" action="{{ route('leave.index') }}" class="filters" style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:0 0 16px;">
         <div class="field" style="min-width:190px;">
-            <label for="leaveDepartmentFilter">Department</label>
-            <select id="leaveDepartmentFilter" name="dept">
+            <label for="leaveDeptFilter">Department</label>
+            <select id="leaveDeptFilter" name="dept">
                 <option value="">All Departments</option>
                 @foreach($leaveDepartments as $department)
-                <option value="{{ $department->id }}" @selected((string) $leaveDeptFilter===(string) $department->
-                    id)>{{ $department->name }}</option>
+                <option value="{{ $department->id }}" @selected((string) $leaveDeptFilter===(string) $department->id)>{{ $department->name }}</option>
                 @endforeach
             </select>
         </div>
-
         <div class="field" style="min-width:160px;">
             <label for="leaveStatusFilter">Status</label>
             <select id="leaveStatusFilter" name="status">
-                <option value="all" @selected($leaveStatusFilter==='all' )>All Statuses</option>
-                <option value="pending" @selected($leaveStatusFilter==='pending' )>Pending</option>
-                <option value="approved" @selected($leaveStatusFilter==='approved' )>Approved</option>
-                <option value="rejected" @selected($leaveStatusFilter==='rejected' )>Rejected</option>
+                <option value="all" @selected($leaveStatusFilter==='all')>All Statuses</option>
+                <option value="pending" @selected($leaveStatusFilter==='pending')>Pending</option>
+                <option value="approved" @selected($leaveStatusFilter==='approved')>Approved</option>
+                <option value="rejected" @selected($leaveStatusFilter==='rejected')>Rejected</option>
             </select>
         </div>
-
-        <div class="field" style="min-width:220px;">
+        <div class="field" style="min-width:210px;">
             <label for="leaveEmployeeFilter">Employee</label>
-            <input id="leaveEmployeeFilter" type="search" name="employee" placeholder="Search employee..."
-                value="{{ $leaveEmployeeFilter }}">
+            <input id="leaveEmployeeFilter" name="employee" type="search" placeholder="Search employee..." value="{{ $leaveEmployeeFilter }}">
         </div>
-
-        <div class="form-actions" style="margin:0;">
-            <button type="submit" class="btn-primary">Apply Filters</button>
-            <button type="button" class="employee-export" onclick="exportLeaveRequests()">↧ Export</button>
+        <div style="display:flex;gap:8px;">
+            <button type="submit" class="btn-primary">Apply</button>
+            <button type="submit" name="export" value="csv" class="btn-secondary" style="display:inline-flex;align-items:center;gap:7px;"><i class="fa-solid fa-file-csv"></i>Export</button>
         </div>
     </form>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
-        <span class="pill pill-warn">Pending: {{ $leaveCounts['pending'] }}</span>
-        <span class="pill pill-ok">Approved: {{ $leaveCounts['approved'] }}</span>
-        <span class="pill pill-bad">Rejected: {{ $leaveCounts['rejected'] }}</span>
-        <span class="pill pill-muted">Total: {{ $leaveCounts['total'] }}</span>
+    <div class="table-card">
+        <div class="tc-body" style="padding-top:6px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Type</th>
+                        <th>Dates</th>
+                        <th>Days</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($allLeaveRequests as $r)
+                    <tr>
+                        <td>
+                            <div class="cell-emp">
+                                <div class="av">{{ strtoupper(substr($r->employee->user->name,0,1)) }}</div>
+                                <div><b>{{ $r->employee->user->name }}</b></div>
+                            </div>
+                        </td>
+                        <td>{{ $r->employee->department->name ?? '—' }}</td>
+                        <td>{{ $r->leaveType->name }}</td>
+                        <td>{{ \Illuminate\Support\Carbon::parse($r->start_date)->format('d M') }} &ndash; {{ \Illuminate\Support\Carbon::parse($r->end_date)->format('d M Y') }}</td>
+                        <td>{{ rtrim(rtrim(number_format($r->days,1),'0'),'.') }}</td>
+                        <td>
+                            @php $p = ['approved'=>'pill-ok','pending'=>'pill-warn','rejected'=>'pill-bad','cancelled'=>'pill-muted'][$r->status] ?? 'pill-muted'; @endphp
+                            <span class="pill {{ $p }}">{{ ucfirst($r->status) }}</span>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="6">
+                        <div class="empty-widget">
+                            <div class="ew-ico"><i class="fa-regular fa-calendar"></i></div>
+                            <b>No leave requests found</b>
+                            <span>Try adjusting the filters above.</span>
+                        </div>
+                    </td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
-
-    <div class="card">
-        <table>
-            <thead>
-                <tr>
-                    <th>Employee</th>
-                    <th>Department</th>
-                    <th>Type</th>
-                    <th>Dates</th>
-                    <th>Days</th>
-                    <th>Status</th>
-                    <th>Reason</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($allLeaveRequests as $r)
-                <tr>
-                    <td>{{ $r->employee->user->name }}</td>
-                    <td>{{ $r->employee->department->name ?? '—' }}</td>
-                    <td>{{ $r->leaveType->name }}</td>
-                    <td>{{ \Illuminate\Support\Carbon::parse($r->start_date)->format('M j, Y') }}&ndash;{{ \Illuminate\Support\Carbon::parse($r->end_date)->format('M j, Y') }}
-                    </td>
-                    <td>{{ rtrim(rtrim(number_format($r->days,1),'0'),'.') }}</td>
-                    <td>
-                        @php $p =
-                        ['approved'=>'pill-ok','pending'=>'pill-warn','rejected'=>'pill-bad','cancelled'=>'pill-muted'][$r->status]
-                        ?? 'pill-muted'; @endphp
-                        <span
-                            class="pill {{ $p }}">{{ $r->status === 'pending' ? 'Awaiting approval' : ucfirst($r->status) }}</span>
-                    </td>
-                    <td>{{ \Illuminate\Support\Str::limit($r->reason ?: '—', 30) }}</td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="7" class="empty-state">No leave requests match these filters.</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    <script>
-    function exportLeaveRequests() {
-        const params = new URLSearchParams(window.location.search);
-        params.set('dept', document.getElementById('leaveDepartmentFilter').value);
-        params.set('status', document.getElementById('leaveStatusFilter').value);
-        params.set('employee', document.getElementById('leaveEmployeeFilter').value);
-        params.set('export', 'csv');
-        window.location.href = "{{ route('leave.index') }}?" + params.toString();
-    }
-    </script>
     @endif
-
-    <p class="access-note">
-        Visible to:
-        @foreach($module['roles'] as $r)
-        {{ $roles[$r]['label'] }}{{ !$loop->last ? ', ' : '' }}
-        @endforeach
-    </p>
 </div>
 @endsection

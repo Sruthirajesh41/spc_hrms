@@ -36,6 +36,10 @@ class DatabaseSeeder extends Seeder
 
         DB::unprepared(file_get_contents($path));
 
+        // The SQL dump carries opaque bcrypt hashes; normalize every seeded
+        // account to the documented demo password so sign-in always works.
+        \App\Models\User::query()->update(['password' => bcrypt('Password@123')]);
+
         // Sample data for WFH, Announcements, Support, Notifications, Holidays,
         // and the document-verification/birthday fields — safe to chain here
         // since it only inserts into the newer tables and backfills two columns,

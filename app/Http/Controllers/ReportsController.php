@@ -34,6 +34,8 @@ class ReportsController extends Controller
                 ->groupBy('departments.name')->orderByDesc('gross')->get();
         }
 
+        $today = now()->toDateString();
+
         return view('modules.reports', array_merge($this->baseViewData(), [
             'module' => $module,
             'moduleKey' => 'reports',
@@ -46,6 +48,14 @@ class ReportsController extends Controller
             'appraisalDone' => $appraisalDone,
             'latestRun' => $latestRun,
             'payrollByDept' => $payrollByDept,
+            'presentToday' => \App\Models\Attendance::whereDate('attendance_date', $today)->whereIn('status', ['present', 'late'])->count(),
+            'lateToday' => \App\Models\Attendance::whereDate('attendance_date', $today)->where('status', 'late')->count(),
+            'wfhToday' => \App\Models\WfhRequest::where('status', 'approved')
+                ->whereDate('start_date', '<=', $today)->whereDate('end_date', '>=', $today)->count(),
+            'onLeaveToday' => \App\Models\LeaveRequest::where('status', 'approved')
+                ->whereDate('start_date', '<=', $today)->whereDate('end_date', '>=', $today)->count(),
+            'leavePending' => \App\Models\LeaveRequest::where('status', 'pending')->count(),
+            'openRequisitions' => \App\Models\JobRequisition::where('status', 'open')->count(),
             'reportType' => $request->string('report_type')->toString() ?: 'headcount',
         ]));
     }

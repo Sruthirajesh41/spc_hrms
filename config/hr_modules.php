@@ -6,7 +6,7 @@ return [
         'employee' => [
             'label' => 'Employee',
             'tagline' => 'Self-service access to your own records',
-            'accent' => '#3F6656',
+            'accent' => '#0F8A5F',
             'kpis' => [
                 ['label' => 'Attendance this month', 'value' => '21 / 22 days'],
                 ['label' => 'Leave balance', 'value' => '8 days'],
@@ -17,7 +17,7 @@ return [
         'manager' => [
             'label' => 'Reporting Manager',
             'tagline' => 'Oversight for your direct reports',
-            'accent' => '#B9843E',
+            'accent' => '#0E7490',
             'kpis' => [
                 ['label' => 'Team attendance today', 'value' => '11 / 12 present'],
                 ['label' => 'Pending leave approvals', 'value' => '3'],
@@ -28,7 +28,7 @@ return [
         'hr_admin' => [
             'label' => 'HR Admin',
             'tagline' => 'Configuration and processing across HR',
-            'accent' => '#5B4B8A',
+            'accent' => '#4D7C0F',
             'kpis' => [
                 ['label' => 'Headcount', 'value' => '248'],
                 ['label' => 'Payroll cost this month', 'value' => '₹42.6L'],
@@ -39,7 +39,7 @@ return [
         'super_admin' => [
             'label' => 'Super Admin',
             'tagline' => 'Org-wide visibility and system control',
-            'accent' => '#8A3324',
+            'accent' => '#065F46',
             'kpis' => [
                 ['label' => 'Headcount & attrition', 'value' => '248 · 2.1%'],
                 ['label' => 'Attendance trend', 'value' => '94% avg'],

@@ -3,12 +3,25 @@
 @section('title', $module['title'])
 
 @section('content')
-    @include('partials.topbar', ['title' => $module['title'], 'eyebrow' => 'HR Management Module'])
+    @include('partials.topbar', [
+        'title' => $module['title'],
+        'eyebrow' => 'System',
+        'heroIcon' => 'fa-solid fa-gear',
+        'heroSummary' => 'Company profile and policy configuration — every change is audited.',
+        'heroStats' => [
+            ['label' => 'Settings', 'icon' => 'fa-solid fa-sliders', 'value' => count($settings)],
+        ],
+    ])
 
     <div class="content">
-        <div class="card" style="max-width:640px;">
-            <h3>Policy & payroll configuration</h3>
-            <p class="card-note">Every change here is written to the audit log.</p>
+        <div class="card" style="max-width:680px;">
+            <div class="widget-head">
+                <div class="wh-ico"><i class="fa-solid fa-sliders"></i></div>
+                <div>
+                    <h3>Policy &amp; payroll configuration</h3>
+                    <p>Every change here is written to the audit log.</p>
+                </div>
+            </div>
             <form method="POST" action="{{ route('settings.update') }}">
                 @csrf
                 <div class="field-grid">
@@ -23,6 +36,6 @@
             </form>
         </div>
 
-        
+
     </div>
 @endsection

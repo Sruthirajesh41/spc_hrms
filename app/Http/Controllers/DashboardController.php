@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttendanceRegularization;
+use App\Models\Attendance;
 use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\Employee;
@@ -31,6 +32,8 @@ class DashboardController extends Controller
             'upcomingBirthdays' => $this->upcomingBirthdays(),
             'upcomingHoliday' => Holiday::where('holiday_date', '>=', now()->toDateString())->orderBy('holiday_date')->first(),
             'recentActivity' => $this->isHrOrAbove() ? AuditLog::with('user')->orderByDesc('id')->limit(6)->get() : collect(),
+            'tickerAnnouncements' => \App\Models\Announcement::whereNotNull('published_at')->orderByDesc('published_at')->limit(4)->get(),
+            'todayAttendance' => $employee ? Attendance::where('employee_id', $employee->id)->whereDate('attendance_date', now()->toDateString())->first() : null,
         ]));
     }
 
